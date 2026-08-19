@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "go2-sport": {
+      "type": "http",
+      "url": "http://172.168.20.189:8001/sport/mcp"
+    },
+    "go2-sport-state": {
+      "type": "http",
+      "url": "http://172.168.20.189:8001/sport_state/mcp"
+    },
+    "go2-camera": {
+      "type": "http",
+      "url": "http://172.168.20.189:8001/camera/mcp"
+    },
+    "go2-depth-camera": {
+      "type": "http",
+      "url": "http://172.168.20.189:8001/depth_camera/mcp"
+    },
+    "go2-local-camera": {
+      "type": "http",
+      "url": "http://172.168.20.189:8001/local_camera/mcp"
+    },
+    "go2-speaker": {
+      "type": "http",
+      "url": "http://172.168.20.189:8001/speaker/mcp"
+    },
+    "go2-audio-capture": {
+      "type": "http",
+      "url": "http://172.168.20.189:8001/audio_capture/mcp"
+    }
+  }
+}

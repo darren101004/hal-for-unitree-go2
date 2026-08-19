@@ -1,0 +1,105 @@
+from PIL import Image
+import numpy as np
+from abc import ABC, abstractmethod
+
+DEFAULT_CLASSES = [
+    "person",
+    "animal" "chair",
+    "table",
+    "sofa",
+    "armchair",
+    "stool",
+    "bench",
+    "bed",
+    "mattress",
+    "wardrobe",
+    "cabinet",
+    "drawer",
+    "bookshelf",
+    "desk",
+    "dresser",
+    "bed" "refrigerator",
+    "microwave",
+    "oven",
+    "stove",
+    "dishwasher",
+    "washing machine",
+    "dryer",
+    "air conditioner",
+    "heater",
+    "fan",
+    "vacuum cleaner",
+    "television",
+    "laptop",
+    "desktop computer",
+    "monitor",
+    "keyboard",
+    "mouse",
+    "printer",
+    "speaker",
+    "router",
+    "light",
+    "lamp",
+    "chandelier",
+    "switch",
+    "power outlet",
+    "curtain",
+    "blind",
+    "sink",
+    "faucet",
+    "kettle",
+    "toaster",
+    "blender",
+    "coffee maker",
+    "rice cooker",
+    "pan",
+    "pot",
+    "cutting board",
+    "dish rack",
+    "sink basin",
+    "mirror",
+    "shower",
+    "bathtub",
+    "towel",
+    "whiteboard",
+    "carpet",
+    "pillow",
+    "cushion",
+    "blanket",
+    "clock",
+    "picture frame",
+    "painting",
+    "plant",
+    "vase",
+    "trash can",
+    "basket",
+    "storage box",
+    "shelf",
+    "ironing board",
+    "mop",
+    "broom",
+    "door",
+    "window",
+    "notebook",
+    "book",
+    "pen",
+    "paper",
+    "backpack",
+    "handbag",
+    "umbrella" "clothes",
+    "jacket",
+]
+
+
+class ObjectDetector(ABC):
+    def __init__(self, default_classes=DEFAULT_CLASSES):
+        self.class_names = default_classes
+
+    @abstractmethod
+    def detect_image(self, img: bytes | Image.Image | np.ndarray) -> list[dict] | None:
+        """
+        Detect objects in the image.
+        Returns a list of dictionaries, each containing the class name and the bounding box.
+        Returns None if the image is not detected.
+        """
+        pass
