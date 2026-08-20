@@ -57,18 +57,23 @@ class SportController:
         self._cancel_event: Optional[asyncio.Event] = None
 
     def _get_mode(self, state_service: StateService) -> Optional[int]:
+        """Return the robot's current sport mode, or None when it is unknown.
+
+        None means "we could not read the state" — never assume a mode here.
+        Guessing STAND_DOWN made stand_down() short-circuit into a silent no-op
+        whenever the state service was a stub (e.g. rclpy missing).
+        """
         try:
             state = state_service.get_latest_state()
-            mode = (
-                state.sportmodestate.get("mode")
-                if state and isinstance(state.sportmodestate, dict)
-                else SportModeEnum.STAND_DOWN.value
-            )
+            if state is None or not isinstance(state.sportmodestate, dict):
+                logger.warning("Robot mode unknown: state service returned no state")
+                return None
+            mode = state.sportmodestate.get("mode")
             logger.info(f"Mode: {mode}")
             return mode
         except Exception as e:
             logger.error(f"Error getting mode: {e}")
-            return SportModeEnum.STAND_DOWN.value
+            return None
 
     def _send(
         self,
@@ -169,6 +174,8 @@ class SportController:
     async def _ensure_standing_async(
         self, state_service: StateService, sport_service: SportService
     ) -> None:
+        # A None mode (state unreadable) falls through to RecoveryStand, which
+        # is the safe way to reach a standing posture from anywhere.
         mode = self._get_mode(state_service)
         if mode in (SportModeEnum.STANDING.value, SportModeEnum.WALKING_POS.value):
             return
@@ -243,7 +250,13 @@ class SportController:
             mode = self._get_mode(state_service)
             if mode == SportModeEnum.STAND_DOWN.value:
                 return Response(success=True, message="Already in stand down mode")
-            if mode not in (SportModeEnum.STAND_UP.value, SportModeEnum.DAMPING.value):
+            # When the mode is unknown, send StandDown straight away: it is safe
+            # from any posture, and an intermediate StandUp would cause motion
+            # nobody asked for.
+            if mode is not None and mode not in (
+                SportModeEnum.STAND_UP.value,
+                SportModeEnum.DAMPING.value,
+            ):
                 _ = await self._send_async(sport_service, SportOption.STAND_UP)
             res = await self._send_async(sport_service, SportOption.STAND_DOWN)
             if not res.success:
