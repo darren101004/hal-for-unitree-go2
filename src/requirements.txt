@@ -1,9 +1,9 @@
-# Chi nhung goi can cho: FastAPI/MCP server + dieu khien sport + doc state.
+# Only the packages needed for: FastAPI/MCP server + sport control + state reading.
 #
-# Cai them (khong qua pip):
-#   - CycloneDDS (thu vien C)  -> build tu nguon, export CYCLONEDDS_HOME
+# Installed separately (not via pip):
+#   - CycloneDDS (C library)   -> build from source, export CYCLONEDDS_HOME
 #   - unitree_sdk2_python      -> git clone + pip install -e .
-#   - rclpy                    -> KHONG can nua. State doc thang qua DDS bang SDK.
+#   - rclpy                    -> NO LONGER NEEDED. State is read straight over DDS via the SDK.
 
 # --- Web server + MCP ---
 fastapi==0.116.1
@@ -15,7 +15,7 @@ pydantic-settings==2.12.0
 dependency-injector==4.48.1
 aiofiles==24.1.0
 
-# --- Phu thuoc cua unitree_sdk2py ---
+# --- Dependencies of unitree_sdk2py ---
 numpy==2.4.0
 opencv-python==4.10.0.84
 

@@ -1,68 +1,68 @@
 # GO2 Sport Control
 
-FastAPI + MCP server điều khiển chuyển động (sport) và đọc trạng thái (state) của robot Unitree GO2W.
+FastAPI + MCP server for controlling motion (sport) and reading state on the Unitree GO2W robot.
 
-Tách ra từ `go2_middle_layer/`, chỉ giữ hai luồng đó. **`go2_middle_layer/` giờ chỉ là thư mục tham khảo** — code trong `src/` không import gì từ nó.
+Split out of `go2_middle_layer/`, keeping only those two paths. **`go2_middle_layer/` is now a reference-only directory** — nothing under `src/` imports from it.
 
-## Kiến trúc
+## Architecture
 
-Giữ nguyên phân layer của repo gốc:
+The layering of the original repo is preserved:
 
 ```
 src/
-├── server.py              FastAPI app, lifespan, mount MCP, /health + /status
-├── service_registry.py    registry trạng thái dịch vụ, nguồn của /status
-├── paths.py               resolve path theo src/ (độc lập cwd)
+├── server.py              FastAPI app, lifespan, MCP mounts, /health + /status
+├── service_registry.py    service-status registry, the source behind /status
+├── paths.py               resolves paths relative to src/ (independent of cwd)
 │
-├── mcps/                  Lớp giao tiếp — định nghĩa MCP tool
-│   ├── configs.py           cấu hình logging
+├── mcps/                  Transport layer — MCP tool definitions
+│   ├── configs.py           logging configuration
 │   ├── sport.py             stand_up, move_forward, turn_left, ...
 │   └── sportstate.py        get_sport_mode_state
 │
-├── usecases/              Lớp nghiệp vụ — điều phối, không biết SDK
-│   ├── sport_controller.py  vòng lặp move, ensure_standing, huỷ lệnh đang chạy
-│   └── state_controller.py  đọc state mới nhất
+├── usecases/              Business layer — orchestration, knows nothing of the SDK
+│   ├── sport_controller.py  move loop, ensure_standing, cancelling an in-flight command
+│   └── state_controller.py  reads the latest state
 │
-├── interfaces/            Hợp đồng trừu tượng (ABC)
+├── interfaces/            Abstract contracts (ABC)
 │   ├── sport.py             SportService.handle()
 │   └── state.py             StateService.start/stop/get_latest_state()
 │
-├── impl/                  Lớp hiện thực — chỗ duy nhất chạm vào SDK
-│   ├── sdk_sport/           điều khiển qua unitree_sdk2py
+├── impl/                  Implementation layer — the only place that touches the SDK
+│   ├── sdk_sport/           control via unitree_sdk2py
 │   │   ├── sdk_sport_service.py
-│   │   └── sdk_sport_service_stub.py     dùng khi thiếu unitree_sdk2py
-│   ├── state/               đọc state qua DDS, không dùng ROS2
-│   │   ├── sdk_state_service.py          subscribe sportmodestate + lowstate
-│   │   └── sdk_state_service_stub.py     dùng khi thiếu unitree_sdk2py
-│   └── device_watcher/      tự khởi động lại dịch vụ khi robot boot sau server
+│   │   └── sdk_sport_service_stub.py     used when unitree_sdk2py is missing
+│   ├── state/               reads state over DDS, no ROS2 involved
+│   │   ├── sdk_state_service.py          subscribes to sportmodestate + lowstate
+│   │   └── sdk_state_service_stub.py     used when unitree_sdk2py is missing
+│   └── device_watcher/      restarts services when the robot boots after the server
 │
-├── models/                Kiểu dữ liệu
-│   ├── response.py          Response chung
-│   ├── sport_option.py      enum lệnh + bảng API ID + mã lỗi
+├── models/                Data types
+│   ├── response.py          shared Response
+│   ├── sport_option.py      command enum + API ID table + error codes
 │   ├── sport_request.py     SportRequest
 │   └── state.py             RobotState, SportModeEnum, GaitTypeEnum
 │
 └── dependencies/          DI container (dependency-injector) + settings
 ```
 
-Chiều phụ thuộc một chiều: `mcps → usecases → interfaces ← impl`. `usecases` chỉ biết `interfaces`, không biết `impl` — `dependencies/` là chỗ duy nhất nối hai bên.
+Dependencies point one way: `mcps → usecases → interfaces ← impl`. `usecases` knows only `interfaces`, never `impl` — `dependencies/` is the single place that wires the two together.
 
-### Cơ chế stub
+### Stub mechanism
 
-`dependencies/_lazy_class()` nạp module lười, kèm fallback. Thiếu thư viện thì tự chuyển sang bản stub thay vì crash:
+`dependencies/_lazy_class()` imports modules lazily with a fallback. When a library is missing it switches to the stub instead of crashing:
 
-| Thiếu | Chuyển sang | Hậu quả |
+| Missing | Falls back to | Effect |
 |---|---|---|
-| `unitree_sdk2py` | `SdkSportServiceStub` | mọi lệnh sport trả 503 |
-| `unitree_sdk2py` | `SdkSportStateServiceStub` | `get_latest_state()` trả None |
+| `unitree_sdk2py` | `SdkSportServiceStub` | every sport command returns 503 |
+| `unitree_sdk2py` | `SdkSportStateServiceStub` | `get_latest_state()` returns None |
 
-Server vẫn boot và `/status` báo rõ dịch vụ nào hỏng vì lý do gì. Khi robot tắt (link `end0` down), DDS không bind được — `/status` nói thẳng điều đó thay vì ném traceback.
+The server still boots, and `/status` reports exactly which service is broken and why. When the robot is off (the `end0` link is down) DDS cannot bind — `/status` says so plainly instead of raising a traceback.
 
-## Cần cài gì
+## Requirements
 
-Ba thứ, cài theo đúng thứ tự:
+Three pieces, installed in this order:
 
-**1. Thư viện C CycloneDDS** — không có wheel cho aarch64 nên phải build từ nguồn:
+**1. The CycloneDDS C library** — no aarch64 wheel exists, so it must be built from source:
 
 ```bash
 git clone -b releases/0.10.x https://github.com/eclipse-cyclonedds/cyclonedds
@@ -72,74 +72,74 @@ cmake --build . --target install -j$(nproc)
 export CYCLONEDDS_HOME=$(cd ../install && pwd)
 ```
 
-**2. unitree_sdk2_python** — cần `CYCLONEDDS_HOME` từ bước trên:
+**2. unitree_sdk2_python** — needs `CYCLONEDDS_HOME` from the step above:
 
 ```bash
 git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
 pip install -e ./unitree_sdk2_python
 ```
 
-**3. Các gói Python còn lại:**
+**3. The remaining Python packages:**
 
 ```bash
 pip install -r src/requirements.txt
 ```
 
-**Không cần ROS2.** Cả điều khiển lẫn đọc state đều đi thẳng qua CycloneDDS bằng `unitree_sdk2py`. Trước đây phần state dùng `rclpy` — mà `rclpy` không có trên PyPI, chỉ đi kèm bản cài ROS2 qua apt, nên trên board Debian 12 nó luôn rơi vào stub. Giờ đã thay bằng `ChannelSubscriber` của SDK: cùng một bus DDS, cùng gói tin trên dây, chỉ khác class Python giải mã.
+**ROS2 is not required.** Both control and state reading go straight over CycloneDDS through `unitree_sdk2py`. State used to rely on `rclpy`, which is not on PyPI — it ships only with an apt-installed ROS2 distribution, so on this Debian 12 board it always fell back to the stub. It has been replaced by the SDK's `ChannelSubscriber`: same DDS bus, same packets on the wire, only the decoding Python class differs.
 
-Topic khai báo trong `.env` theo dạng ROS2 (`/lf/sportmodestate`); service tự ánh xạ sang dạng DDS (`rt/lf/sportmodestate`) — đó là tiền tố mà ROS2 vẫn thêm ngầm.
+Topics are declared in `.env` in ROS2 form (`/lf/sportmodestate`); the service maps them to DDS form (`rt/lf/sportmodestate`) itself — that prefix is what ROS2 adds implicitly.
 
-## Cấu hình
+## Configuration
 
 ```bash
 cp .env.example .env
 ```
 
-Biến quan trọng nhất là `STATE_NETWORK_INTERFACE` — tên cổng Ethernet nối sang robot, dùng cho **cả** sport service lẫn state service:
+The most important variable is `STATE_NETWORK_INTERFACE` — the name of the Ethernet port facing the robot, used by **both** the sport service and the state service:
 
 ```
 STATE_NETWORK_INTERFACE=end0
 ```
 
-Trên board OrangePi tên là `end0` (driver Allwinner `dwmac-sunxi`), **không phải** `eth0` hay `enp2s0` như tài liệu Unitree ghi.
+On the OrangePi board that port is named `end0` (Allwinner `dwmac-sunxi` driver), **not** `eth0` or `enp2s0` as the Unitree documentation assumes.
 
-## Chạy
-
-```bash
-make run                  # hoac: python src/server.py
-```
-
-Server lên ở `http://0.0.0.0:8001`. Nếu cổng bận, tự thử 8002, 8003... tối đa 10 cổng.
-
-| Endpoint | Mục đích |
-|---|---|
-| `GET /health` | sống hay chết |
-| `GET /status` | dịch vụ nào available, lỗi gì |
-| `/sport/mcp` | MCP điều khiển chuyển động |
-| `/sport_state/mcp` | MCP đọc trạng thái |
-
-## Test
-
-Cần server đang chạy:
+## Running
 
 ```bash
-make test-sport           # cong cu MCP dieu khien
-make test-sport-state     # doc trang thai
+make run                  # or: python src/server.py
 ```
 
-> **Cảnh báo:** `test_sport_mcp_tools.py` phát lệnh làm **robot chuyển động thật**. Kiểm tra không gian xung quanh trước khi chạy.
+The server comes up on `http://0.0.0.0:8001`. If that port is busy it tries 8002, 8003, ... up to 10 ports.
 
-## Khác biệt so với `go2_middle_layer/`
-
-| | Thay đổi |
+| Endpoint | Purpose |
 |---|---|
-| Layer bỏ | camera (rpc/depth/local), speaker/TTS, audio capture, YOLO |
-| `sport_controller` | bỏ phụ thuộc `depth_camera_service`; nhánh tránh vật cản vẫn còn nhưng không được kích hoạt |
-| `impl/state/` | bỏ `echo_state_service` (deprecated, cần `ros2 topic echo` CLI) và cả hai bản dựa trên `rclpy`; thay bằng `sdk_state_service` dùng DDS trực tiếp |
-| Phụ thuộc ROS2 | gỡ sạch — không còn `rclpy`, `unitree_go.msg`, hay `ros2` CLI ở đâu |
-| Mặc định interface | `eth0` → `end0` |
+| `GET /health` | alive or not |
+| `GET /status` | which services are available, and any errors |
+| `/sport/mcp` | MCP for motion control |
+| `/sport_state/mcp` | MCP for state reading |
+
+## Tests
+
+Require a running server:
+
+```bash
+make test-sport           # sport MCP tools
+make test-sport-state     # state reading
+```
+
+> **Warning:** `test_sport_mcp_tools.py` issues commands that make the **robot physically move**. Check the space around it before running.
+
+## Differences from `go2_middle_layer/`
+
+| | Change |
+|---|---|
+| Layers dropped | camera (rpc/depth/local), speaker/TTS, audio capture, YOLO |
+| `sport_controller` | `depth_camera_service` dependency removed; the obstacle-avoidance branch remains but is never activated |
+| `impl/state/` | dropped `echo_state_service` (deprecated, required the `ros2 topic echo` CLI) and both `rclpy`-based implementations; replaced by `sdk_state_service` using DDS directly |
+| ROS2 dependency | fully removed — no `rclpy`, no `unitree_go.msg`, no `ros2` CLI anywhere |
+| Default interface | `eth0` → `end0` |
 | DI provider | `state_service_using_ros2` → `state_service` |
-| `service_registry` | còn 3 mục: `sport`, `state`, `device_watcher` |
-| MCP tool | `get_sport_mode_state_using_ros2` giữ lại làm alias deprecated, trỏ cùng chỗ với `get_sport_mode_state` |
-| Config bỏ | `STATE_SERVICE_MODE` (khai báo nhưng không ai đọc) |
-| `requirements.txt` | 30 gói → 10 gói |
+| `service_registry` | down to 3 entries: `sport`, `state`, `device_watcher` |
+| MCP tool | `get_sport_mode_state_using_ros2` kept as a deprecated alias pointing at the same place as `get_sport_mode_state` |
+| Config dropped | `STATE_SERVICE_MODE` (declared but never read) |
+| `requirements.txt` | 30 packages → 10 packages |
