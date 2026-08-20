@@ -103,9 +103,9 @@ def _start_device_watcher() -> None:
 
         sport = _container.sport_service()
 
-        state_svc = _container.state_service_using_ros2()
+        state_svc = _container.state_service()
         if hasattr(state_svc, "is_healthy") and not _is_stub(state_svc):
-            watcher.register("state_ros2", state_svc.is_healthy, state_svc.restart)
+            watcher.register("state", state_svc.is_healthy, state_svc.restart)
 
         # Only watch services that have real implementations (not stubs).
         # Stubs have restart as a no-op and is_healthy always False.

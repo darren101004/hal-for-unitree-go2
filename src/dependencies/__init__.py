@@ -51,7 +51,8 @@ def _lazy_class(
 
 
 class ServiceSettings(BaseSettings):
-    STATE_SERVICE_MODE: str = Field(default="ros2")
+    # Topics are named in ROS2 form; the SDK state service maps them to their
+    # DDS form (adds the "rt/" prefix) internally.
     STATE_TOPIC: str = Field(default="/lf/sportmodestate")
     STATE_LOWSTATE_TOPIC: str = Field(default="/lowstate")
     STATE_LOWSTATE_MIN_UPDATE_INTERVAL_SEC: float = Field(default=120.0)
@@ -103,18 +104,19 @@ class Go2MiddleLayerContainer(containers.DeclarativeContainer):
         network_interface=config.state.network_interface,
     )
 
-    state_service_using_ros2 = providers.Singleton(
+    state_service = providers.Singleton(
         _lazy_class(
-            "impl.state.ros2_state_service",
-            "Ros2SportStateService",
+            "impl.state.sdk_state_service",
+            "SdkSportStateService",
             fallback=(
-                "impl.state.ros2_state_service_stub",
-                "Ros2SportStateServiceStub",
+                "impl.state.sdk_state_service_stub",
+                "SdkSportStateServiceStub",
             ),
         ),
         sport_topic=config.state.topic,
         lowstate_topic=config.state.lowstate_topic,
         lowstate_min_update_interval_sec=config.state.lowstate_min_update_interval_sec,
+        network_interface=config.state.network_interface,
     )
 
     device_watcher_service = providers.Singleton(
@@ -142,7 +144,6 @@ def init_container() -> Go2MiddleLayerContainer:
     container.config.from_dict(
         {
             "state": {
-                "mode": settings.STATE_SERVICE_MODE,
                 "topic": settings.STATE_TOPIC,
                 "lowstate_topic": settings.STATE_LOWSTATE_TOPIC,
                 "lowstate_min_update_interval_sec": settings.STATE_LOWSTATE_MIN_UPDATE_INTERVAL_SEC,

@@ -27,7 +27,7 @@ async def test_get_sport_mode_state_using_ros2():
             assert content is not None
 
             if not content.get("success"):
-                # Expected when rclpy is missing: the service falls back to a stub.
+                # Expected when the SDK is missing or the robot is off.
                 print("unavailable:", content.get("message"))
                 assert content.get("code") in (425, 503)
             else:

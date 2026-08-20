@@ -1,6 +1,6 @@
 """
-Stub implementation of Ros2SportStateService when rclpy (ROS2) is not installed.
-Use this to run the server without ROS2.
+Stub implementation of SdkSportStateService when unitree_sdk2py is not installed.
+Use this to run the server without the GO2 robot.
 """
 
 import logging
@@ -10,14 +10,16 @@ from interfaces.state import StateService
 from models.state import RobotState
 import service_registry
 
-logger = logging.getLogger("State:Ros2SportStateServiceStub")
+logger = logging.getLogger("State:SdkSportStateServiceStub")
 
-_REASON = "rclpy not installed. Install ROS2 and rclpy to enable robot state reading."
+_REASON = (
+    "unitree_sdk2py not installed. Install unitree_sdk2_python to enable robot state reading."
+)
 
 
-class Ros2SportStateServiceStub(StateService):
+class SdkSportStateServiceStub(StateService):
     """
-    No-op ROS2 state service when rclpy is not available.
+    No-op state service when unitree_sdk2py is not available.
     All state operations return None.
     """
 
@@ -26,36 +28,28 @@ class Ros2SportStateServiceStub(StateService):
         sport_topic: str = "/lf/sportmodestate",
         lowstate_topic: str = "/lowstate",
         lowstate_min_update_interval_sec: float = 120.0,
+        network_interface: str = "end0",
         queue_size: int = 10,
     ) -> None:
-        """
-        Create a stub that disables ROS2 state reading.
-
-        Args:
-            sport_topic: ROS2 topic for sport mode state.
-            lowstate_topic: ROS2 topic for lowstate.
-            lowstate_min_update_interval_sec: Minimum interval for lowstate updates.
-            queue_size: Max queue size (ignored in stub).
-        """
         self._sport_topic = sport_topic
         self._lowstate_topic = lowstate_topic
         self._lowstate_min_update_interval_sec = float(lowstate_min_update_interval_sec)
+        self._network_interface = network_interface
         self._queue_size = int(queue_size)
-        logger.warning("ROS2 state service disabled: %s", _REASON)
+        logger.warning("State service disabled: %s", _REASON)
         service_registry.register(
-            "state_ros2",
+            "state",
             False,
             _REASON,
             extra_data={
+                "network_interface": self._network_interface,
                 "sport_topic": self._sport_topic,
                 "lowstate_topic": self._lowstate_topic,
-                "lowstate_min_update_interval_sec": self._lowstate_min_update_interval_sec,
-                "queue_size": self._queue_size,
             },
         )
 
     def is_healthy(self) -> bool:
-        """Stub is never healthy — ROS2 not available."""
+        """Stub is never healthy — SDK not available."""
         return False
 
     def restart(self) -> None:
@@ -63,13 +57,13 @@ class Ros2SportStateServiceStub(StateService):
         pass
 
     def start(self) -> None:
-        """No-op when ROS2 is not available."""
+        """No-op when the SDK is not available."""
         pass
 
     def stop(self) -> None:
-        """No-op when ROS2 is not available."""
+        """No-op when the SDK is not available."""
         pass
 
     def get_latest_state(self) -> Optional[RobotState]:
-        """Return None when ROS2 is not available."""
+        """Return None when the SDK is not available."""
         return None

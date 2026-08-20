@@ -27,14 +27,13 @@ src/
 │   ├── sport.py             SportService.handle()
 │   └── state.py             StateService.start/stop/get_latest_state()
 │
-├── impl/                  Lớp hiện thực — chỗ duy nhất chạm vào SDK/ROS2
+├── impl/                  Lớp hiện thực — chỗ duy nhất chạm vào SDK
 │   ├── sdk_sport/           điều khiển qua unitree_sdk2py
 │   │   ├── sdk_sport_service.py
 │   │   └── sdk_sport_service_stub.py     dùng khi thiếu unitree_sdk2py
-│   ├── state/               đọc state
-│   │   ├── ros2_state_service.py         rclpy trong process riêng (đang dùng)
-│   │   ├── ros2_state_service_stub.py    dùng khi thiếu rclpy
-│   │   └── sdk_state_service.py          biến thể, chưa nối vào DI
+│   ├── state/               đọc state qua DDS, không dùng ROS2
+│   │   ├── sdk_state_service.py          subscribe sportmodestate + lowstate
+│   │   └── sdk_state_service_stub.py     dùng khi thiếu unitree_sdk2py
 │   └── device_watcher/      tự khởi động lại dịch vụ khi robot boot sau server
 │
 ├── models/                Kiểu dữ liệu
@@ -55,9 +54,9 @@ Chiều phụ thuộc một chiều: `mcps → usecases → interfaces ← impl`
 | Thiếu | Chuyển sang | Hậu quả |
 |---|---|---|
 | `unitree_sdk2py` | `SdkSportServiceStub` | mọi lệnh sport trả 503 |
-| `rclpy` | `Ros2SportStateServiceStub` | `get_latest_state()` trả None |
+| `unitree_sdk2py` | `SdkSportStateServiceStub` | `get_latest_state()` trả None |
 
-Server vẫn boot và `/status` báo rõ dịch vụ nào hỏng vì lý do gì.
+Server vẫn boot và `/status` báo rõ dịch vụ nào hỏng vì lý do gì. Khi robot tắt (link `end0` down), DDS không bind được — `/status` nói thẳng điều đó thay vì ném traceback.
 
 ## Cần cài gì
 
@@ -86,7 +85,9 @@ pip install -e ./unitree_sdk2_python
 pip install -r src/requirements.txt
 ```
 
-`rclpy` **không** nằm trong requirements — nó không tồn tại trên PyPI, chỉ đi kèm bản cài ROS2 qua apt. Thiếu nó thì state service chạy stub, phần điều khiển vẫn hoạt động bình thường.
+**Không cần ROS2.** Cả điều khiển lẫn đọc state đều đi thẳng qua CycloneDDS bằng `unitree_sdk2py`. Trước đây phần state dùng `rclpy` — mà `rclpy` không có trên PyPI, chỉ đi kèm bản cài ROS2 qua apt, nên trên board Debian 12 nó luôn rơi vào stub. Giờ đã thay bằng `ChannelSubscriber` của SDK: cùng một bus DDS, cùng gói tin trên dây, chỉ khác class Python giải mã.
+
+Topic khai báo trong `.env` theo dạng ROS2 (`/lf/sportmodestate`); service tự ánh xạ sang dạng DDS (`rt/lf/sportmodestate`) — đó là tiền tố mà ROS2 vẫn thêm ngầm.
 
 ## Cấu hình
 
@@ -134,7 +135,11 @@ make test-sport-state     # doc trang thai
 |---|---|
 | Layer bỏ | camera (rpc/depth/local), speaker/TTS, audio capture, YOLO |
 | `sport_controller` | bỏ phụ thuộc `depth_camera_service`; nhánh tránh vật cản vẫn còn nhưng không được kích hoạt |
-| `impl/state/` | bỏ `echo_state_service` (đã deprecated, cần `ros2 topic echo` CLI) |
+| `impl/state/` | bỏ `echo_state_service` (deprecated, cần `ros2 topic echo` CLI) và cả hai bản dựa trên `rclpy`; thay bằng `sdk_state_service` dùng DDS trực tiếp |
+| Phụ thuộc ROS2 | gỡ sạch — không còn `rclpy`, `unitree_go.msg`, hay `ros2` CLI ở đâu |
 | Mặc định interface | `eth0` → `end0` |
-| `service_registry` | còn 3 mục: `sport`, `state_ros2`, `device_watcher` |
-| `requirements.txt` | 30 gói → 10 gói, bỏ `rclpy` |
+| DI provider | `state_service_using_ros2` → `state_service` |
+| `service_registry` | còn 3 mục: `sport`, `state`, `device_watcher` |
+| MCP tool | `get_sport_mode_state_using_ros2` giữ lại làm alias deprecated, trỏ cùng chỗ với `get_sport_mode_state` |
+| Config bỏ | `STATE_SERVICE_MODE` (khai báo nhưng không ai đọc) |
+| `requirements.txt` | 30 gói → 10 gói |

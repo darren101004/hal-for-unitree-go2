@@ -9,58 +9,19 @@ import service_registry
 
 
 class StateController:
-    # Keep echo implementation for reference only.
-    # Runtime is currently forced to ROS2 service.
-    #
-    # @inject
-    # async def get_latest_state_using_echo(
-    #     self,
-    #     state_service: StateService = Provide[
-    #         Go2MiddleLayerContainer.state_service_using_echo
-    #     ],
-    # ) -> Response:
-    #     """
-    #     Get the latest state from background buffer using ros2 echo state service.
-    #     """
-    #     reason = service_registry.get_unavailable_reason("state_echo")
-    #     if reason:
-    #         return Response(
-    #             success=False,
-    #             message=f"State service (echo) not available: {reason}",
-    #             data=None,
-    #             code=503,
-    #         )
-    #
-    #     state: Optional[RobotState] = state_service.get_latest_state()
-    #     if state is None:
-    #         return Response(
-    #             success=False,
-    #             message="No state available yet. State service using ros2 echo on terminal is not running.",
-    #             data=None,
-    #             code=425,
-    #         )
-    #     return Response(
-    #         success=True,
-    #         message="State captured successfully from state service using ros2 echo on terminal",
-    #         data=state,
-    #         code=200,
-    #     )
-
     @inject
-    async def get_latest_state_using_ros2(
+    async def get_latest_state(
         self,
-        state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
-        ],
+        state_service: StateService = Provide[Go2MiddleLayerContainer.state_service],
     ) -> Response:
         """
-        Get the latest state from the ros2 subscriber node.
+        Get the latest state read from DDS by the SDK subscriber.
         """
-        reason = service_registry.get_unavailable_reason("state_ros2")
+        reason = service_registry.get_unavailable_reason("state")
         if reason:
             return Response(
                 success=False,
-                message=f"State service (ROS2 node) not available: {reason}",
+                message=f"State service not available: {reason}",
                 data=None,
                 code=503,
             )
@@ -69,13 +30,13 @@ class StateController:
         if state is None:
             return Response(
                 success=False,
-                message="No state available yet. State service using ros2 subscriber node is not running.",
+                message="No state available yet. No packet received from the robot.",
                 data=None,
                 code=425,
             )
         return Response(
             success=True,
-            message="State captured successfully from state service using ros2 subscriber node",
+            message="State captured successfully from the SDK state service",
             data=state,
             code=200,
         )
@@ -83,27 +44,15 @@ class StateController:
     @inject
     def start_state_service(
         self,
-        # state_service_using_echo: StateService = Provide[
-        #     Go2MiddleLayerContainer.state_service_using_echo
-        # ],
-        state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
-        ],
+        state_service: StateService = Provide[Go2MiddleLayerContainer.state_service],
     ) -> None:
-        """Start the ROS2 state service."""
-        # state_service_using_echo.start()
+        """Start the SDK state service."""
         state_service.start()
 
     @inject
     def stop_state_service(
         self,
-        # state_service_using_echo: StateService = Provide[
-        #     Go2MiddleLayerContainer.state_service_using_echo
-        # ],
-        state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
-        ],
+        state_service: StateService = Provide[Go2MiddleLayerContainer.state_service],
     ) -> None:
-        """Stop the ROS2 state service."""
-        # state_service_using_echo.stop()
+        """Stop the SDK state service."""
         state_service.stop()

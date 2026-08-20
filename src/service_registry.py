@@ -11,7 +11,7 @@ _registry: Dict[str, dict] = {}
 
 SERVICE_DESCRIPTIONS: Dict[str, str] = {
     "sport": "Robot sport control (Unitree SDK)",
-    "state_ros2": "Robot state via ROS2 subscriber node",
+    "state": "Robot state via Unitree SDK (DDS)",
     "device_watcher": "Device health monitoring and auto-recovery",
 }
 

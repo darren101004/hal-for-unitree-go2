@@ -61,7 +61,7 @@ class SportController:
 
         None means "we could not read the state" — never assume a mode here.
         Guessing STAND_DOWN made stand_down() short-circuit into a silent no-op
-        whenever the state service was a stub (e.g. rclpy missing).
+        whenever the state service was a stub or the robot was unreachable.
         """
         try:
             state = state_service.get_latest_state()
@@ -219,7 +219,7 @@ class SportController:
         self,
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
     ) -> Response:
         self._cancel_current_command()
@@ -241,7 +241,7 @@ class SportController:
         self,
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
     ) -> Response:
         self._cancel_current_command()
@@ -274,7 +274,7 @@ class SportController:
         max_value_cm: int = 300,
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
         # Obstacle avoidance needs a depth camera service. That layer is not part
         # of this repo, so the check is skipped (see _run_move_loop guard).
@@ -305,7 +305,7 @@ class SportController:
         max_value_cm: int = 300,
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
     ) -> Response:
         distance_cm = min(max(distance_cm, 0), max_value_cm)
@@ -333,7 +333,7 @@ class SportController:
         angle_range_deg: tuple[int, int] = (0, 180),
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
     ) -> Response:
         self._cancel_current_command()
@@ -364,7 +364,7 @@ class SportController:
         angle_range_deg: tuple[int, int] = (0, 180),
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
     ) -> Response:
         self._cancel_current_command()
@@ -395,7 +395,7 @@ class SportController:
         max_value_cm: int = 300,
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
     ) -> Response:
         self._cancel_current_command()
@@ -422,7 +422,7 @@ class SportController:
         max_value_cm: int = 300,
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
     ) -> Response:
         self._cancel_current_command()
@@ -451,7 +451,7 @@ class SportController:
         max_distance_cm: int = 300,
         sport_service: SportService = Provide[Go2MiddleLayerContainer.sport_service],
         state_service: StateService = Provide[
-            Go2MiddleLayerContainer.state_service_using_ros2
+            Go2MiddleLayerContainer.state_service
         ],
         # See move_forward — depth camera layer is not part of this repo.
         depth_camera_service: Optional[Any] = None,

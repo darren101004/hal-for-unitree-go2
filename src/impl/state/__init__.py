@@ -1,19 +1,19 @@
 def __getattr__(name):
-    """Lazy re-exports — heavy dependencies (rclpy, unitree) are only imported on first access."""
-    if name == "Ros2SportStateService":
+    """Lazy re-export — unitree SDK is only imported on first access."""
+    if name == "SdkSportStateService":
         try:
-            from impl.state.ros2_state_service import Ros2SportStateService
+            from impl.state.sdk_state_service import SdkSportStateService
 
-            return Ros2SportStateService
+            return SdkSportStateService
         except Exception:
-            from impl.state.ros2_state_service_stub import (
-                Ros2SportStateServiceStub as Ros2SportStateService,
+            from impl.state.sdk_state_service_stub import (
+                SdkSportStateServiceStub as SdkSportStateService,
             )
 
-            return Ros2SportStateService
+            return SdkSportStateService
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 __all__ = [
-    "Ros2SportStateService",
+    "SdkSportStateService",
 ]

@@ -3,8 +3,7 @@
 # Cai them (khong qua pip):
 #   - CycloneDDS (thu vien C)  -> build tu nguon, export CYCLONEDDS_HOME
 #   - unitree_sdk2_python      -> git clone + pip install -e .
-#   - rclpy                    -> KHONG co tren PyPI, chi den tu ROS2 apt.
-#                                 Thieu no thi state service tu chuyen sang stub.
+#   - rclpy                    -> KHONG can nua. State doc thang qua DDS bang SDK.
 
 # --- Web server + MCP ---
 fastapi==0.116.1
