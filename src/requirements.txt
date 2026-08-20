@@ -1,0 +1,25 @@
+# Chi nhung goi can cho: FastAPI/MCP server + dieu khien sport + doc state.
+#
+# Cai them (khong qua pip):
+#   - CycloneDDS (thu vien C)  -> build tu nguon, export CYCLONEDDS_HOME
+#   - unitree_sdk2_python      -> git clone + pip install -e .
+#   - rclpy                    -> KHONG co tren PyPI, chi den tu ROS2 apt.
+#                                 Thieu no thi state service tu chuyen sang stub.
+
+# --- Web server + MCP ---
+fastapi==0.116.1
+fastapi-cli==0.0.8
+fastmcp==2.11.3
+httptools==0.6.4
+pydantic==2.12.5
+pydantic-settings==2.12.0
+dependency-injector==4.48.1
+aiofiles==24.1.0
+
+# --- Phu thuoc cua unitree_sdk2py ---
+numpy==2.4.0
+opencv-python==4.10.0.84
+
+# --- Test ---
+pytest
+pytest-asyncio
