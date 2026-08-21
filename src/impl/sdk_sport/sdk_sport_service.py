@@ -133,14 +133,13 @@ class SdkSportService(SportService):
                 api_function = self.mapping_api[request.option]
                 params = request.params
                 res = api_function(**params) if params else api_function()
-                code = 0
                 data = None
-                if isinstance(res, int) or isinstance(res, str):
+                if isinstance(res, (int, str)):
                     code = int(res)
                 else:
-                    code, _ = res
+                    code, data = res
                     code = int(code)
-                if res != 0:
+                if code != 0:
                     return Response(
                         success=False,
                         message=f"Sport command {request.option} failed: {get_response_message(code)}",

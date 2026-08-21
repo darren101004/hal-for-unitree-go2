@@ -509,8 +509,10 @@ class SportController:
                 if combined_message is None:
                     combined_message = res.message
                 else:
-                    combined_message += f"Then {res.message}"
+                    combined_message += f". Then {res.message}"
 
+            if combined_message is None:
+                combined_message = "No movement needed: angle and distance are zero"
             return Response(success=True, message=combined_message)
 
     @inject
